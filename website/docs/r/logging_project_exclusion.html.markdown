@@ -10,18 +10,18 @@ description: |-
 
 Manages a project-level logging exclusion. For more information see
 [the official documentation](https://cloud.google.com/logging/docs/) and
-[Exclusing Logs](https://cloud.google.com/logging/docs/exclusions).
+[Excluding Logs](https://cloud.google.com/logging/docs/exclusions).
 
 Note that you must have the "Logs Configuration Writer" IAM role (`roles/logging.configWriter`)
-granted to the credentials used with terraform.
+granted to the credentials used with Terraform.
 
 ## Example Usage
 
 ```hcl
 resource "google_logging_project_exclusion" "my-exclusion" {
-    name = "my-pubsub-instance-exclusion"
+    name = "my-instance-debug-exclusion"
 
-    description = "Exclude GCE debug logs"
+    description = "Exclude GCE instance debug logs"
 
     # Exclude all DEBUG or lower severity messages relating to instances
     filter = "resource.type = gce_instance AND severity <= DEBUG"

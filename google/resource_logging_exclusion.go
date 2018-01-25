@@ -1,34 +1,132 @@
 package google
 
 import (
+	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/hashicorp/terraform/helper/schema"
 	"google.golang.org/api/logging/v2"
-
-	"strings"
 )
 
-func resourceLoggingExclusionSchema() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		"name": {
-			Type:     schema.TypeString,
-			Required: true,
-			ForceNew: true,
-		},
+var LoggingExclusionBaseSchema = map[string]*schema.Schema{
+	"filter": {
+		Type:     schema.TypeString,
+		Required: true,
+	},
+	"name": {
+		Type:     schema.TypeString,
+		Required: true,
+		ForceNew: true,
+	},
+	"description": {
+		Type:     schema.TypeString,
+		Optional: true,
+	},
+	"disabled": {
+		Type:     schema.TypeBool,
+		Optional: true,
+	},
+}
 
-		"description": {
-			Type:     schema.TypeString,
-			Optional: true,
-		},
+func ResourceLoggingExclusion(parentSpecificSchema map[string]*schema.Schema, newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) *schema.Resource {
+	return &schema.Resource{
+		Create: ResourceLoggingExclusionCreate(newUpdaterFunc),
+		Read:   ResourceLoggingExclusionRead(newUpdaterFunc),
+		Update: ResourceLoggingExclusionUpdate(newUpdaterFunc),
+		Delete: ResourceLoggingExclusionDelete(newUpdaterFunc),
 
-		"filter": {
-			Type:     schema.TypeString,
-			Required: true,
-		},
+		Schema: mergeSchemas(LoggingExclusionBaseSchema, parentSpecificSchema),
+	}
+}
 
-		"disabled": {
-			Type:     schema.TypeBool,
-			Optional: true,
-		},
+func ResourceLoggingExclusionWithImport(parentSpecificSchema map[string]*schema.Schema, newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) *schema.Resource {
+	r := ResourceLoggingExclusion(parentSpecificSchema, newUpdaterFunc)
+	r.Importer = &schema.ResourceImporter{
+		State: schema.ImportStatePassthrough,
+	}
+	return r
+}
+
+func ResourceLoggingExclusionCreate(newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) schema.CreateFunc {
+	return func(d *schema.ResourceData, meta interface{}) error {
+		config := meta.(*Config)
+		updater, err := newUpdaterFunc(d, config)
+		if err != nil {
+			return err
+		}
+
+		id, exclusion := expandResourceLoggingExclusion(d, updater.GetResourceType(), updater.GetResourceId())
+
+		err = updater.CreateLoggingExclusion(id.parent(), exclusion)
+		if err != nil {
+			return err
+		}
+
+		d.SetId(id.canonicalId())
+
+		return ResourceLoggingExclusionRead(newUpdaterFunc)(d, meta)
+	}
+}
+
+func ResourceLoggingExclusionRead(newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) schema.ReadFunc {
+	return func(d *schema.ResourceData, meta interface{}) error {
+		config := meta.(*Config)
+		updater, err := newUpdaterFunc(d, config)
+		if err != nil {
+			return err
+		}
+
+		exclusion, err := updater.ReadLoggingExclusion(d.Id())
+
+		if err != nil {
+			return handleNotFoundError(err, d, fmt.Sprintf("Logging Exclusion %s", d.Get("name").(string)))
+		}
+
+		flattenResourceLoggingExclusion(d, exclusion)
+
+		if updater.GetResourceType() == "projects" {
+			d.Set("project", updater.GetResourceId())
+		}
+
+		return nil
+	}
+}
+
+func ResourceLoggingExclusionUpdate(newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) schema.UpdateFunc {
+	return func(d *schema.ResourceData, meta interface{}) error {
+		config := meta.(*Config)
+		updater, err := newUpdaterFunc(d, config)
+		if err != nil {
+			return err
+		}
+
+		exclusion, updateMask := expandResourceLoggingExclusionForUpdate(d)
+
+		err = updater.UpdateLoggingExclusion(d.Id(), exclusion, updateMask)
+		if err != nil {
+			return err
+		}
+
+		return ResourceLoggingExclusionRead(newUpdaterFunc)(d, meta)
+	}
+}
+
+func ResourceLoggingExclusionDelete(newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) schema.DeleteFunc {
+	return func(d *schema.ResourceData, meta interface{}) error {
+		config := meta.(*Config)
+		updater, err := newUpdaterFunc(d, config)
+		if err != nil {
+			return err
+		}
+
+		err = updater.DeleteLoggingExclusion(d.Id())
+		if err != nil {
+			return err
+		}
+
+		d.SetId("")
+		return nil
 	}
 }
 
@@ -81,4 +179,88 @@ func expandResourceLoggingExclusionForUpdate(d *schema.ResourceData) (*logging.L
 
 	updateMask := strings.Join(updateMaskArr, ",")
 	return &exclusion, updateMask
+}
+
+// The ResourceLoggingExclusionUpdater interface is implemented for each GCP
+// resource supporting log exclusions.
+//
+// Implementations should keep track of the resource identifier.
+type ResourceLoggingExclusionUpdater interface {
+	CreateLoggingExclusion(parent string, exclusion *logging.LogExclusion) error
+	ReadLoggingExclusion(id string) (*logging.LogExclusion, error)
+	UpdateLoggingExclusion(id string, exclusion *logging.LogExclusion, updateMask string) error
+	DeleteLoggingExclusion(id string) error
+
+	GetResourceType() string
+
+	// Returns the unique resource identifier.
+	GetResourceId() string
+
+	// Textual description of this resource to be used in error message.
+	// The description should include the unique resource identifier.
+	DescribeResource() string
+}
+
+type newResourceLoggingExclusionUpdaterFunc func(d *schema.ResourceData, config *Config) (ResourceLoggingExclusionUpdater, error)
+
+// This method parses identifiers specific to the resource (d.GetId()) into the ResourceData
+// object, so that it can be given to the resource's Read method.  Externally, this is wrapped
+// into schema.StateFunc functions - one each for a _member, a _binding, and a _policy.  Any
+// GCP resource supporting IAM policy might support one, two, or all of these.  Any GCP resource
+// for which an implementation of this interface exists could support any of the three.
+
+// type resourceIdParserFunc func(d *schema.ResourceData, config *Config) error
+
+// loggingExclusionResourceTypes contains all the possible Stackdriver Logging resource types. Used to parse ids safely.
+var loggingExclusionResourceTypes = []string{
+	"billingAccount",
+	"folders",
+	"organizations",
+	"projects",
+}
+
+// LoggingExclusionId represents the parts that make up the canonical id used within terraform for a logging resource.
+type LoggingExclusionId struct {
+	resourceType string
+	resourceId   string
+	name         string
+}
+
+// loggingExclusionIdRegex matches valid logging exclusion canonical ids
+var loggingExclusionIdRegex = regexp.MustCompile("(.+)/(.+)/exclusions/(.+)")
+
+// canonicalId returns the LoggingExclusionId as the canonical id used within terraform.
+func (l LoggingExclusionId) canonicalId() string {
+	return fmt.Sprintf("%s/%s/exclusions/%s", l.resourceType, l.resourceId, l.name)
+}
+
+// parent returns the "parent-level" resource that the exclusion is in (e.g. `folders/foo` for id `folders/foo/exclusions/bar`)
+func (l LoggingExclusionId) parent() string {
+	return fmt.Sprintf("%s/%s", l.resourceType, l.resourceId)
+}
+
+// parseLoggingExclusionId parses a canonical id into a LoggingExclusionId, or returns an error on failure.
+func parseLoggingExclusionId(id string) (*LoggingExclusionId, error) {
+	parts := loggingExclusionIdRegex.FindStringSubmatch(id)
+	if parts == nil {
+		return nil, fmt.Errorf("unable to parse logging exclusion id %#v", id)
+	}
+	// If our resourceType is not a valid logging exclusion resource type, complain loudly
+	validLoggingExclusionResourceType := false
+	for _, v := range loggingExclusionResourceTypes {
+		if v == parts[1] {
+			validLoggingExclusionResourceType = true
+			break
+		}
+	}
+
+	if !validLoggingExclusionResourceType {
+		return nil, fmt.Errorf("Logging resource type %s is not valid. Valid resource types: %#v", parts[1],
+			loggingExclusionResourceTypes)
+	}
+	return &LoggingExclusionId{
+		resourceType: parts[1],
+		resourceId:   parts[2],
+		name:         parts[3],
+	}, nil
 }

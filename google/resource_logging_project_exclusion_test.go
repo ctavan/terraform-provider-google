@@ -33,6 +33,28 @@ func TestAccLoggingProjectExclusion_basic(t *testing.T) {
 	})
 }
 
+func TestAccLoggingProjectExclusion_importBasic(t *testing.T) {
+	t.Parallel()
+
+	exclusionName := "tf-test-exclusion-" + acctest.RandString(10)
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:  func() { testAccPreCheck(t) },
+		Providers: testAccProviders,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccLoggingProjectExclusion_basic(exclusionName),
+			},
+
+			resource.TestStep{
+				ResourceName:      "google_logging_project_exclusion.basic",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+		},
+	})
+}
+
 func TestAccLoggingProjectExclusion_disablePreservesFilter(t *testing.T) {
 	t.Parallel()
 
@@ -182,18 +204,10 @@ func testAccCheckLoggingProjectExclusion(exclusion *logging.LogExclusion, n stri
 
 func toBool(attribute string) (bool, error) {
 	// Handle the case where an unset value defaults to false
-	var tf bool
-	var err error
 	if attribute == "" {
-		tf = false
-	} else {
-		tf, err = strconv.ParseBool(attribute)
-		if err != nil {
-			return false, fmt.Errorf("Error converting attribute to boolean: value is %s", attribute)
-		}
+		return false, nil
 	}
-
-	return tf, nil
+	return strconv.ParseBool(attribute)
 }
 
 func testAccLoggingProjectExclusion_basic(name string) string {
