@@ -202,6 +202,7 @@ func testAccCheckLoggingProjectExclusion(exclusion *logging.LogExclusion, n stri
 	}
 }
 
+// FIXME: This is currently used in other tests as well.
 func toBool(attribute string) (bool, error) {
 	// Handle the case where an unset value defaults to false
 	if attribute == "" {

@@ -159,6 +159,7 @@ func Provider() terraform.ResourceProvider {
 				"google_logging_billing_account_sink":          resourceLoggingBillingAccountSink(),
 				"google_logging_organization_sink":             resourceLoggingOrganizationSink(),
 				"google_logging_folder_sink":                   resourceLoggingFolderSink(),
+				"google_logging_folder_exclusion":              ResourceLoggingExclusionWithImport(FolderLoggingExclusionSchema, NewFolderLoggingExclusionUpdater),
 				"google_logging_project_sink":                  resourceLoggingProjectSink(),
 				"google_logging_project_exclusion":             ResourceLoggingExclusionWithImport(LoggingProjectSchema, NewProjectLoggingExclusionUpdater),
 				"google_kms_key_ring":                          resourceKmsKeyRing(),

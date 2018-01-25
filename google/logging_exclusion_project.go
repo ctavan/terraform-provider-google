@@ -7,7 +7,7 @@ import (
 	"google.golang.org/api/logging/v2"
 )
 
-var LoggingProjectSchema = map[string]*schema.Schema{
+var ProjectLoggingExclusionSchema = map[string]*schema.Schema{
 	"project": {
 		Type:     schema.TypeString,
 		Optional: true,
