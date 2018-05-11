@@ -35,16 +35,12 @@ func ResourceLoggingExclusion(parentSpecificSchema map[string]*schema.Schema, ne
 		Update: ResourceLoggingExclusionUpdate(newUpdaterFunc),
 		Delete: ResourceLoggingExclusionDelete(newUpdaterFunc),
 
+		Importer: &schema.ResourceImporter{
+			State: schema.ImportStatePassthrough,
+		},
+
 		Schema: mergeSchemas(LoggingExclusionBaseSchema, parentSpecificSchema),
 	}
-}
-
-func ResourceLoggingExclusionWithImport(parentSpecificSchema map[string]*schema.Schema, newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) *schema.Resource {
-	r := ResourceLoggingExclusion(parentSpecificSchema, newUpdaterFunc)
-	r.Importer = &schema.ResourceImporter{
-		State: schema.ImportStatePassthrough,
-	}
-	return r
 }
 
 func ResourceLoggingExclusionCreate(newUpdaterFunc newResourceLoggingExclusionUpdaterFunc) schema.CreateFunc {

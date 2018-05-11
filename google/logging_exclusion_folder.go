@@ -35,7 +35,7 @@ func NewFolderLoggingExclusionUpdater(d *schema.ResourceData, config *Config) (R
 func (u *FolderLoggingExclusionUpdater) CreateLoggingExclusion(parent string, exclusion *logging.LogExclusion) error {
 	_, err := u.Config.clientLogging.Folders.Exclusions.Create(parent, exclusion).Do()
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("Error creating logging exclusion for %s.", u.DescribeResource()), err)
+		return errwrap.Wrapf(fmt.Sprintf("Error creating logging exclusion for %s: {{err}}", u.DescribeResource()), err)
 	}
 
 	return nil
@@ -54,7 +54,7 @@ func (u *FolderLoggingExclusionUpdater) ReadLoggingExclusion(id string) (*loggin
 func (u *FolderLoggingExclusionUpdater) UpdateLoggingExclusion(id string, exclusion *logging.LogExclusion, updateMask string) error {
 	_, err := u.Config.clientLogging.Folders.Exclusions.Patch(id, exclusion).UpdateMask(updateMask).Do()
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("Error updating logging exclusion for %s.", u.DescribeResource()), err)
+		return errwrap.Wrapf(fmt.Sprintf("Error updating logging exclusion for %s: {{err}}", u.DescribeResource()), err)
 	}
 
 	return nil

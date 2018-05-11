@@ -32,11 +32,11 @@ resource "google_logging_project_exclusion" "my-exclusion" {
 
 The following arguments are supported:
 
-* `name` - (Required) The name of the logging exclusion.
-
 * `filter` - (Required) The filter to apply when excluding logs. Only log entries that match the filter are excluded.
     See [Advanced Log Filters](https://cloud.google.com/logging/docs/view/advanced-filters) for information on how to
     write a filter.
+
+* `name` - (Required) The name of the logging exclusion.
 
 * `description` - (Optional) A human-readable description.
 

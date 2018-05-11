@@ -32,6 +32,11 @@ func TestAccLoggingFolderExclusion_basic(t *testing.T) {
 					testAccCheckLoggingFolderExclusion(&exclusion, "google_logging_folder_exclusion.basic"),
 				),
 			},
+			resource.TestStep{
+				ResourceName:      "google_logging_folder_exclusion.basic",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 		},
 	})
 }

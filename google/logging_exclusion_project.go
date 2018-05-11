@@ -38,7 +38,7 @@ func NewProjectLoggingExclusionUpdater(d *schema.ResourceData, config *Config) (
 func (u *ProjectLoggingExclusionUpdater) CreateLoggingExclusion(parent string, exclusion *logging.LogExclusion) error {
 	_, err := u.Config.clientLogging.Projects.Exclusions.Create(parent, exclusion).Do()
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("Error creating logging exclusion for %s.", u.DescribeResource()), err)
+		return errwrap.Wrapf(fmt.Sprintf("Error creating logging exclusion for %s: {{err}}", u.DescribeResource()), err)
 	}
 
 	return nil
@@ -57,7 +57,7 @@ func (u *ProjectLoggingExclusionUpdater) ReadLoggingExclusion(id string) (*loggi
 func (u *ProjectLoggingExclusionUpdater) UpdateLoggingExclusion(id string, exclusion *logging.LogExclusion, updateMask string) error {
 	_, err := u.Config.clientLogging.Projects.Exclusions.Patch(id, exclusion).UpdateMask(updateMask).Do()
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("Error updating logging exclusion for %s.", u.DescribeResource()), err)
+		return errwrap.Wrapf(fmt.Sprintf("Error updating logging exclusion for %s: {{err}}", u.DescribeResource()), err)
 	}
 
 	return nil
@@ -66,7 +66,7 @@ func (u *ProjectLoggingExclusionUpdater) UpdateLoggingExclusion(id string, exclu
 func (u *ProjectLoggingExclusionUpdater) DeleteLoggingExclusion(id string) error {
 	_, err := u.Config.clientLogging.Projects.Exclusions.Delete(id).Do()
 	if err != nil {
-		return errwrap.Wrap(fmt.Errorf("Error deleting logging exclusion for %s.", u.DescribeResource()), err)
+		return errwrap.Wrapf(fmt.Sprintf("Error deleting logging exclusion for %s: {{err}}", u.DescribeResource()), err)
 	}
 
 	return nil
